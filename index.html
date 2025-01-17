@@ -4,48 +4,142 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>방명록</title>
+    <style>
+        /* 기본 스타일 */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7fc;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        h1 {
+            color: #333;
+            margin: 20px 0;
+        }
+        h2 {
+            color: #555;
+        }
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+            margin-bottom: 20px;
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .guestbook-entry {
+            background-color: #fff;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .guestbook-entry button {
+            background-color: #f44336;
+        }
+        .guestbook-entry button:hover {
+            background-color: #d32f2f;
+        }
+        .guestbook-entry .edit-button {
+            background-color: #ff9800;
+        }
+        .guestbook-entry .edit-button:hover {
+            background-color: #f57c00;
+        }
+        /* 반응형 스타일 */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            form {
+                width: 100%;
+                padding: 15px;
+            }
+        }
+    </style>
 </head>
 <body>
+
     <h1>방명록</h1>
+
     <form id="guestbook-form">
         <input type="text" id="name" placeholder="이름" required>
         <textarea id="message" placeholder="메시지" required></textarea>
+        <input type="password" id="password" placeholder="비밀번호 (수정/삭제용)" required>
         <button type="submit">작성하기</button>
     </form>
-    <h2>방명록 목록</h2>
-    <ul id="guestbook-entries"></ul>
 
-    <!-- Firebase SDK 로드 (ES 모듈 방식) -->
+    <h2>방명록 목록</h2>
+    <div id="guestbook-entries"></div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
-        import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
+        import { getDatabase, ref, set, get, child, update, remove } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
 
         // Firebase 설정
         const firebaseConfig = {
-          apiKey: "AIzaSyBEY3a6nzR9Dl-FxPcSf2EwxcIgkrnhkzs",
-  authDomain: "marry-15ccc.firebaseapp.com",
-  databaseURL: "https://marry-15ccc-default-rtdb.firebaseio.com",
-  projectId: "marry-15ccc",
-  storageBucket: "marry-15ccc.firebasestorage.app",
-  messagingSenderId: "88902830597",
-  appId: "1:88902830597:web:c094709f33fc44b40e2a6c"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
         // Firebase 초기화
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        // 방명록 데이터 읽기
+        const masterPassword = "master123"; // 마스터 비밀번호 설정 (수정/삭제 보호)
+
         const entriesList = document.getElementById('guestbook-entries');
+        const form = document.getElementById('guestbook-form');
+
+        // 방명록 데이터 읽기
         const dbRef = ref(database);
         get(child(dbRef, "guestbook")).then((snapshot) => {
             entriesList.innerHTML = '';
             if (snapshot.exists()) {
                 snapshot.forEach((childSnapshot) => {
                     const entry = childSnapshot.val();
-                    const li = document.createElement('li');
-                    li.textContent = `${entry.name}: ${entry.message}`;
-                    entriesList.appendChild(li);
+                    const entryId = childSnapshot.key;
+
+                    const div = document.createElement('div');
+                    div.classList.add('guestbook-entry');
+                    div.innerHTML = `
+                        <span><strong>${entry.name}:</strong> ${entry.message}</span>
+                        <div>
+                            <button class="edit-button" onclick="editEntry('${entryId}')">수정</button>
+                            <button onclick="deleteEntry('${entryId}')">삭제</button>
+                        </div>
+                    `;
+                    entriesList.appendChild(div);
                 });
             } else {
                 console.log("No data available");
@@ -55,25 +149,66 @@
         });
 
         // 방명록 데이터 추가
-        const form = document.getElementById('guestbook-form');
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const name = document.getElementById('name').value.trim();
             const message = document.getElementById('message').value.trim();
-            if (name && message) {
-                const newEntryRef = ref(database, 'guestbook/' + Date.now());  // 고유 ID 생성
+            const password = document.getElementById('password').value.trim();
+
+            if (name && message && password === masterPassword) {
+                const newEntryRef = ref(database, 'guestbook/' + Date.now()); // 고유 ID 생성
                 set(newEntryRef, {
                     name: name,
                     message: message
                 }).then(() => {
                     form.reset();
                     alert("방명록이 추가되었습니다!");
+                    location.reload(); // 새로 고침하여 목록 갱신
                 }).catch((error) => {
                     console.error(error);
                     alert("방명록 추가 실패");
                 });
+            } else {
+                alert("비밀번호가 틀렸습니다.");
             }
         });
+
+        // 방명록 수정
+        window.editEntry = function(entryId) {
+            const password = prompt("비밀번호를 입력하세요.");
+            if (password === masterPassword) {
+                const newMessage = prompt("새로운 메시지를 입력하세요:");
+                if (newMessage) {
+                    const entryRef = ref(database, 'guestbook/' + entryId);
+                    update(entryRef, { message: newMessage }).then(() => {
+                        alert("방명록이 수정되었습니다.");
+                        location.reload();
+                    }).catch((error) => {
+                        console.error(error);
+                        alert("수정 실패");
+                    });
+                }
+            } else {
+                alert("비밀번호가 틀렸습니다.");
+            }
+        };
+
+        // 방명록 삭제
+        window.deleteEntry = function(entryId) {
+            const password = prompt("비밀번호를 입력하세요.");
+            if (password === masterPassword) {
+                const entryRef = ref(database, 'guestbook/' + entryId);
+                remove(entryRef).then(() => {
+                    alert("방명록이 삭제되었습니다.");
+                    location.reload();
+                }).catch((error) => {
+                    console.error(error);
+                    alert("삭제 실패");
+                });
+            } else {
+                alert("비밀번호가 틀렸습니다.");
+            }
+        };
     </script>
 </body>
 </html>
