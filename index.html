@@ -195,7 +195,9 @@
                         if (newMessage) {
                             update(entryRef, { message: newMessage }).then(() => {
                                 alert("방명록이 수정되었습니다.");
-                                location.reload();
+                                // 수정 후에 동적으로 업데이트
+                                const entryDiv = document.querySelector(`#entry-${entryId}`);
+                                entryDiv.querySelector('span').innerHTML = `<strong>${entry.name}:</strong> ${newMessage}`;
                             }).catch((error) => {
                                 console.error(error);
                                 alert("수정 실패");
@@ -221,7 +223,9 @@
                     if (password === entry.password) {  // 입력한 비밀번호가 맞으면 삭제 가능
                         remove(entryRef).then(() => {
                             alert("방명록이 삭제되었습니다.");
-                            location.reload();
+                            // 삭제 후 DOM에서 항목 제거
+                            const entryDiv = document.querySelector(`#entry-${entryId}`);
+                            entryDiv.remove();
                         }).catch((error) => {
                             console.error(error);
                             alert("삭제 실패");
