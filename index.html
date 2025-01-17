@@ -90,7 +90,7 @@
     <form id="guestbook-form">
         <input type="text" id="name" placeholder="이름" required>
         <textarea id="message" placeholder="메시지" required></textarea>
-        <input type="password" id="user-password" placeholder="비밀번호 (선택)" > <!-- 자유롭게 입력 -->
+        <input type="password" id="user-password" placeholder="비밀번호 (선택)">
         <button type="submit">작성하기</button>
     </form>
 
@@ -115,8 +115,6 @@
         // Firebase 초기화
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
-
-        const masterPassword = "master123"; // 마스터 비밀번호 설정 (수정/삭제 보호)
 
         const entriesList = document.getElementById('guestbook-entries');
         const form = document.getElementById('guestbook-form');
@@ -176,39 +174,55 @@
 
         // 방명록 수정
         window.editEntry = function(entryId) {
-            const password = prompt("비밀번호를 입력하세요.");
-            if (password === masterPassword) {
-                const newMessage = prompt("새로운 메시지를 입력하세요:");
-                if (newMessage) {
-                    const entryRef = ref(database, 'guestbook/' + entryId);
-                    update(entryRef, { message: newMessage }).then(() => {
-                        alert("방명록이 수정되었습니다.");
-                        location.reload();
-                    }).catch((error) => {
-                        console.error(error);
-                        alert("수정 실패");
-                    });
+            const entryRef = ref(database, 'guestbook/' + entryId);
+            get(entryRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const entry = snapshot.val();
+                    const password = prompt("비밀번호를 입력하세요.");
+                    if (password === entry.password) {  // 입력한 비밀번호가 맞으면 수정 가능
+                        const newMessage = prompt("새로운 메시지를 입력하세요:");
+                        if (newMessage) {
+                            update(entryRef, { message: newMessage }).then(() => {
+                                alert("방명록이 수정되었습니다.");
+                                location.reload();
+                            }).catch((error) => {
+                                console.error(error);
+                                alert("수정 실패");
+                            });
+                        }
+                    } else {
+                        alert("비밀번호가 틀렸습니다.");
+                    }
                 }
-            } else {
-                alert("비밀번호가 틀렸습니다.");
-            }
+            }).catch((error) => {
+                console.error(error);
+                alert("수정 실패");
+            });
         };
 
         // 방명록 삭제
         window.deleteEntry = function(entryId) {
-            const password = prompt("비밀번호를 입력하세요.");
-            if (password === masterPassword) {
-                const entryRef = ref(database, 'guestbook/' + entryId);
-                remove(entryRef).then(() => {
-                    alert("방명록이 삭제되었습니다.");
-                    location.reload();
-                }).catch((error) => {
-                    console.error(error);
-                    alert("삭제 실패");
-                });
-            } else {
-                alert("비밀번호가 틀렸습니다.");
-            }
+            const entryRef = ref(database, 'guestbook/' + entryId);
+            get(entryRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const entry = snapshot.val();
+                    const password = prompt("비밀번호를 입력하세요.");
+                    if (password === entry.password) {  // 입력한 비밀번호가 맞으면 삭제 가능
+                        remove(entryRef).then(() => {
+                            alert("방명록이 삭제되었습니다.");
+                            location.reload();
+                        }).catch((error) => {
+                            console.error(error);
+                            alert("삭제 실패");
+                        });
+                    } else {
+                        alert("비밀번호가 틀렸습니다.");
+                    }
+                }
+            }).catch((error) => {
+                console.error(error);
+                alert("삭제 실패");
+            });
         };
     </script>
 </body>
