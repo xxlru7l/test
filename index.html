@@ -90,7 +90,7 @@
     <form id="guestbook-form">
         <input type="text" id="name" placeholder="이름" required>
         <textarea id="message" placeholder="메시지" required></textarea>
-        <input type="password" id="password" placeholder="비밀번호 (수정/삭제용)" required>
+        <input type="password" id="user-password" placeholder="비밀번호 (선택)" > <!-- 자유롭게 입력 -->
         <button type="submit">작성하기</button>
     </form>
 
@@ -153,13 +153,14 @@
             e.preventDefault();
             const name = document.getElementById('name').value.trim();
             const message = document.getElementById('message').value.trim();
-            const password = document.getElementById('password').value.trim();
+            const userPassword = document.getElementById('user-password').value.trim();  // 사용자가 입력한 비밀번호
 
-            if (name && message && password === masterPassword) {
+            if (name && message) {
                 const newEntryRef = ref(database, 'guestbook/' + Date.now()); // 고유 ID 생성
                 set(newEntryRef, {
                     name: name,
-                    message: message
+                    message: message,
+                    password: userPassword // 사용자가 입력한 비밀번호 저장
                 }).then(() => {
                     form.reset();
                     alert("방명록이 추가되었습니다!");
@@ -169,7 +170,7 @@
                     alert("방명록 추가 실패");
                 });
             } else {
-                alert("비밀번호가 틀렸습니다.");
+                alert("이름과 메시지를 입력하세요.");
             }
         });
 
