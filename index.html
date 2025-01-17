@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마스터 비밀번호 포함 방명록</title>
+    <style>
+        /* 스타일은 이전과 동일 */
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+        form {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+            padding: 15px;
+            transition: transform 0.2s;
+        }
+        li:hover {
+            transform: translateY(-3px);
+        }
+        .entry-name {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .entry-actions {
+            text-align: right;
+        }
+        .entry-actions button {
+            margin-left: 5px;
+            font-size: 0.9em;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .entry-actions button:first-child {
+            background-color: #3498db;
+        }
+        .entry-actions button:last-child {
+            background-color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <h1>마스터 비밀번호 포함 방명록</h1>
+    <form id="guestbook-form">
+        <input type="text" id="name" placeholder="이름을 입력하세요" required>
+        <textarea id="message" placeholder="메시지를 입력하세요" required></textarea>
+        <input type="password" id="password" placeholder="비밀번호를 입력하세요" required>
+        <button type="submit">작성하기</button>
+    </form>
+    <h2>방명록 목록</h2>
+    <ul id="guestbook-entries"></ul>
+
+    <script>
+        const MASTER_PASSWORD = "admin123"; // 마스터 비밀번호 설정
+        const form = document.getElementById('guestbook-form');
+        const entriesList = document.getElementById('guestbook-entries');
+
+        // 로컬 저장소에서 방명록 데이터를 불러옵니다.
+        function loadEntries() {
+            const entries = JSON.parse(localStorage.getItem('guestbookEntries')) || [];
+            entriesList.innerHTML = '';
+            entries.forEach((entry, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div>
+                        <span class="entry-name">${entry.name}</span>
+                        <p>${entry.message}</p>
+                    </div>
+                    <div class="entry-actions">
+                        <button onclick="editEntry(${index})">수정</button>
+                        <button onclick="deleteEntry(${index})">삭제</button>
+                    </div>
+                `;
+                entriesList.appendChild(li);
+            });
+        }
+
+        // 새 방명록 항목을 추가합니다.
+        function addEntry(name, message, password) {
+            const entries = JSON.parse(localStorage.getItem('guestbookEntries')) || [];
+            entries.push({ name, message, password });
+            localStorage.setItem('guestbookEntries', JSON.stringify(entries));
+            loadEntries();
+        }
+
+        // 방명록 항목을 삭제합니다.
+        function deleteEntry(index) {
+            const entries = JSON.parse(localStorage.getItem('guestbookEntries')) || [];
+            const password = prompt("비밀번호를 입력하세요:");
+            if (password === entries[index].password || password === MASTER_PASSWORD) {
+                entries.splice(index, 1);
+                localStorage.setItem('guestbookEntries', JSON.stringify(entries));
+                loadEntries();
+            } else {
+                alert("비밀번호가 틀렸습니다!");
+            }
+        }
+
+        // 방명록 항목을 수정합니다.
+        function editEntry(index) {
+            const entries = JSON.parse(localStorage.getItem('guestbookEntries')) || [];
+            const password = prompt("비밀번호를 입력하세요:");
+            if (password === entries[index].password || password === MASTER_PASSWORD) {
+                const newMessage = prompt("새로운 메시지를 입력하세요:", entries[index].message);
+                if (newMessage) {
+                    entries[index].message = newMessage;
+                    localStorage.setItem('guestbookEntries', JSON.stringify(entries));
+                    loadEntries();
+                }
+            } else {
+                alert("비밀번호가 틀렸습니다!");
+            }
+        }
+
+        // 폼 제출 이벤트 처리
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value.trim();
+            const message = document.getElementById('message').value.trim();
+            const password = document.getElementById('password').value.trim();
+            if (name && message && password) {
+                addEntry(name, message, password);
+                form.reset();
+            }
+        });
+
+        // 초기 로드 시 방명록 데이터를 불러옵니다.
+        loadEntries();
+    </script>
+</body>
+</html>
